@@ -318,10 +318,23 @@ function genSchedule(teacherIdx: number, numSlots: number) {
 const TT13_BASE = Object.fromEntries(TEACHERS.map((t, i) => [t.name, genSchedule(i, 7)]));
 const TT45_BASE = Object.fromEntries(TEACHERS.map((t, i) => [t.name, genSchedule(i + 100, 6)]));
 
+// Increment this version whenever we hardcode new data to force the browser to update
+const APP_DATA_VERSION = '2026-04-20-hardcoded-v1';
+
 export default function App() {
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string; init: string; subj: string; isHomeBlock: boolean }>>(() => {
-    const saved = localStorage.getItem('tsf_teachers');
+    const savedVersion = localStorage.getItem('tsf_version');
     const base = TEACHERS.map((t, i) => ({ ...t, id: `t-${i}` }));
+
+    // If version mismatch, ignore local storage once and use hardcoded data
+    if (savedVersion !== APP_DATA_VERSION) {
+      localStorage.removeItem('tsf_teachers');
+      localStorage.removeItem('tsf_timetables');
+      localStorage.setItem('tsf_version', APP_DATA_VERSION);
+      return base;
+    }
+
+    const saved = localStorage.getItem('tsf_teachers');
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed.length < base.length) {
@@ -333,9 +346,16 @@ export default function App() {
   });
 
   const [timetables, setTimetables] = useState<Record<string, Record<Day, { myp13: number[], myp45: number[] }>>>(() => {
+    const savedVersion = localStorage.getItem('tsf_version');
+    const defaultData = INITIAL_TIMETABLES as any;
+
+    // If version mismatch, force hardcoded timetables
+    if (savedVersion !== APP_DATA_VERSION) {
+      return defaultData;
+    }
+
     const saved = localStorage.getItem('tsf_timetables');
     const parsed = saved ? JSON.parse(saved) : {};
-    const defaultData = INITIAL_TIMETABLES as any;
     
     // Ensure every teacher in the current list has a timetable entry
     teachers.forEach((t, i) => {
