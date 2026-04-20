@@ -36,39 +36,253 @@ const PERIODS_45 = [
 ];
 
 const TEACHERS = [
-  { name: 'Anitha R', init: 'AR', subj: 'Mathematics' },
-  { name: 'Babu S', init: 'BS', subj: 'Science' },
-  { name: 'Chitra M', init: 'CM', subj: 'English' },
-  { name: 'Deepa K', init: 'DK', subj: 'Social Studies' },
-  { name: 'Eswaran P', init: 'EP', subj: 'Tamil' },
-  { name: 'Fathima Z', init: 'FZ', subj: 'Mathematics' },
-  { name: 'Ganesh T', init: 'GT', subj: 'Science' },
-  { name: 'Hema L', init: 'HL', subj: 'English' },
-  { name: 'Indira V', init: 'IV', subj: 'Hindi' },
-  { name: 'Jayanthi N', init: 'JN', subj: 'Arts' },
-  { name: 'Kavitha R', init: 'KR', subj: 'Mathematics' },
-  { name: 'Lakshmi S', init: 'LS', subj: 'Social Studies' },
-  { name: 'Malar P', init: 'MP', subj: 'Tamil' },
-  { name: 'Nandini C', init: 'NC', subj: 'Science' },
-  { name: 'Oviya B', init: 'OB', subj: 'English' },
-  { name: 'Priya D', init: 'PD', subj: 'Mathematics' },
-  { name: 'Queen M', init: 'QM', subj: 'Physical Ed' },
-  { name: 'Ramya G', init: 'RG', subj: 'Hindi' },
-  { name: 'Sangeetha K', init: 'SK', subj: 'Arts' },
-  { name: 'Tamilarasi V', init: 'TV', subj: 'Tamil' },
-  { name: 'Uma J', init: 'UJ', subj: 'Science' },
-  { name: 'Vasantha R', init: 'VR', subj: 'Mathematics' },
-  { name: 'Wakeel A', init: 'WA', subj: 'Social Studies' },
-  { name: 'Xavier P', init: 'XP', subj: 'Physical Ed' },
-  { name: 'Yamuna S', init: 'YS', subj: 'English' },
-  { name: 'Zeenath F', init: 'ZF', subj: 'Science' },
-  { name: 'Anbu K', init: 'AK', subj: 'Mathematics' },
-  { name: 'MDN', init: 'MD', subj: 'Digital Design' },
-  { name: 'AVS', init: 'AV', subj: 'Digital Design' },
-  { name: 'MSK', init: 'MS', subj: 'Digital Design' },
+  { name: "SKM", init: "AR", subj: "Biology/IS", isHomeBlock: true },
+  { name: "RJ", init: "BS", subj: "Mathematics", isHomeBlock: true },
+  { name: "SKG", init: "CM", subj: "Mathematics", isHomeBlock: false },
+  { name: "ARCHANA", init: "DK", subj: "IH", isHomeBlock: true },
+  { name: "OKT", init: "EP", subj: "IH", isHomeBlock: true },
+  { name: "SSQ", init: "FZ", subj: "IH", isHomeBlock: true },
+  { name: "SNR", init: "GT", subj: "IH", isHomeBlock: false },
+  { name: "RTH", init: "HL", subj: "IH", isHomeBlock: false },
+  { name: "NVP", init: "IV", subj: "Science", isHomeBlock: true },
+  { name: "SMA", init: "JN", subj: "Science", isHomeBlock: true },
+  { name: "SGM", init: "KR", subj: "English", isHomeBlock: true },
+  { name: "CDS", init: "LS", subj: "English", isHomeBlock: true },
+  { name: "AKS", init: "MP", subj: "English", isHomeBlock: true },
+  { name: "LYT", init: "NC", subj: "Chemistry", isHomeBlock: true },
+  { name: "KR", init: "OB", subj: "Chemistry/IS", isHomeBlock: true },
+  { name: "KGR", init: "PD", subj: "Physics/IS", isHomeBlock: false },
+  { name: "AR", init: "QM", subj: "Physics", isHomeBlock: false },
+  { name: "BM", init: "RG", subj: "Hindi", isHomeBlock: false },
+  { name: "Manjusha", init: "SK", subj: "Hindi", isHomeBlock: false },
+  { name: "ALB", init: "TV", subj: "Spanish", isHomeBlock: true },
+  { name: "Shekar ", init: "UJ", subj: "Spanish", isHomeBlock: false },
+  { name: "Sundar", init: "VR", subj: "French", isHomeBlock: false },
+  { name: "Akula", init: "WA", subj: "French", isHomeBlock: false },
+  { name: "Anitha", init: "XP", subj: "French", isHomeBlock: false },
+  { name: "SYB", init: "YS", subj: "Theatre", isHomeBlock: true },
+  { name: "VDR", init: "ZF", subj: "Visual Arts ", isHomeBlock: true },
+  { name: "ETA", init: "AK", subj: "Product Design ", isHomeBlock: true },
+  { name: "MDN", init: "MD", subj: "Digital Design", isHomeBlock: true },
+  { name: "AVS", init: "AV", subj: "Digital Design", isHomeBlock: true },
+  { name: "MSK", init: "MS", subj: "Digital Design", isHomeBlock: true }
 ];
 
-// --- Helpers ---
+// --- Hardcoded Initial State (User's Export) ---
+const INITIAL_TIMETABLES = {
+  "t-0": {
+    "Monday": { "myp13": [1, 1, 1, 0, 1, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 0, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 0, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 1, 0, 0] }
+  },
+  "t-1": {
+    "Monday": { "myp13": [0, 0, 0, 1, 0, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-2": {
+    "Monday": { "myp13": [0, 0, 1, 1, 1, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [1, 1, 0, 1, 1, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-3": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 0, 0, 0, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-4": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-5": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-6": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-7": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-8": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [1, 1, 1, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-9": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 0, 1, 1, 1, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-10": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-11": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [1, 0, 0, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-12": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-13": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 0, 0, 0, 1] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-14": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [1, 1, 1, 0, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-15": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 0, 1, 0, 1, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-16": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-17": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 1, 0, 0, 0], "myp45": [1, 1, 0, 0, 0, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-18": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-19": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-20": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-21": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-22": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 0, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-23": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 1, 0, 0, 0], "myp45": [0, 1, 0, 0, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-24": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 1, 1, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-25": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 0, 1, 1, 1, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-26": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 0, 1, 1, 1, 1] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-27": {
+    "Monday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [1, 0, 1, 1, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  },
+  "t-28": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 0, 0, 0, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] }
+  },
+  "t-29": {
+    "Monday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Tuesday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 0, 1, 0, 0, 0] },
+    "Wednesday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 0, 1, 0, 0] },
+    "Thursday": { "myp13": [0, 1, 1, 0, 1, 1, 0], "myp45": [0, 1, 1, 0, 1, 1] },
+    "Friday": { "myp13": [0, 1, 0, 1, 0, 0, 0], "myp45": [0, 1, 1, 0, 1, 1] }
+  }
+};
+
+// --- App Component ---
 
 function parseTime(timeStr: string) {
   const [h, m] = timeStr.trim().split(':').map(Number);
@@ -107,18 +321,13 @@ const TT45_BASE = Object.fromEntries(TEACHERS.map((t, i) => [t.name, genSchedule
 export default function App() {
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string; init: string; subj: string; isHomeBlock: boolean }>>(() => {
     const saved = localStorage.getItem('tsf_teachers');
-    const base = TEACHERS.map((t, i) => ({ ...t, id: `t-${i}`, isHomeBlock: true }));
+    const base = TEACHERS.map((t, i) => ({ ...t, id: `t-${i}` }));
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Ensure existing teachers have the new property
-      const mapped = parsed.map((t: any) => ({
-        ...t,
-        isHomeBlock: t.isHomeBlock !== undefined ? t.isHomeBlock : true
-      }));
-      if (mapped.length < base.length) {
-        return [...mapped, ...base.slice(mapped.length)];
+      if (parsed.length < base.length) {
+        return [...parsed, ...base.slice(parsed.length)];
       }
-      return mapped;
+      return parsed;
     }
     return base;
   });
@@ -126,39 +335,49 @@ export default function App() {
   const [timetables, setTimetables] = useState<Record<string, Record<Day, { myp13: number[], myp45: number[] }>>>(() => {
     const saved = localStorage.getItem('tsf_timetables');
     const parsed = saved ? JSON.parse(saved) : {};
+    const defaultData = INITIAL_TIMETABLES as any;
     
     // Ensure every teacher in the current list has a timetable entry
-    const baseTeachers = TEACHERS.map((t, i) => ({ ...t, id: `t-${i}` }));
-    baseTeachers.forEach((t, i) => {
+    teachers.forEach((t, i) => {
       if (!parsed[t.id]) {
-        parsed[t.id] = {} as any;
-        DAYS.forEach((day, dIdx) => {
-          parsed[t.id][day] = {
-            myp13: genSchedule(i + dIdx * 7, 7),
-            myp45: genSchedule(i + dIdx * 11 + 100, 6)
-          };
-        });
+        if (defaultData[t.id]) {
+          parsed[t.id] = defaultData[t.id];
+        } else {
+          parsed[t.id] = {};
+          DAYS.forEach((day, dIdx) => {
+            parsed[t.id][day] = {
+              myp13: genSchedule(i + dIdx * 7, 7),
+              myp45: genSchedule(i + dIdx * 11 + 100, 6)
+            };
+          });
+        }
       }
     });
 
     return parsed;
   });
 
-  // Ensure all teachers have timetables (sync missing ones)
+  // Ensure all teachers have timetables (sync missing ones if teacher list grows)
   useEffect(() => {
     setTimetables(prev => {
       let changed = false;
       const next = { ...prev };
+      const defaultData = INITIAL_TIMETABLES as any;
+
       teachers.forEach((t, i) => {
         if (!next[t.id]) {
           changed = true;
-          next[t.id] = {} as any;
-          DAYS.forEach((day, dIdx) => {
-            next[t.id][day] = {
-              myp13: genSchedule(i + dIdx * 7, 7),
-              myp45: genSchedule(i + dIdx * 11 + 100, 6)
-            };
-          });
+          if (defaultData[t.id]) {
+            next[t.id] = defaultData[t.id];
+          } else {
+            next[t.id] = {} as any;
+            DAYS.forEach((day, dIdx) => {
+              next[t.id][day] = {
+                myp13: genSchedule(i + dIdx * 7, 7),
+                myp45: genSchedule(i + dIdx * 11 + 100, 6)
+              };
+            });
+          }
         }
       });
       return changed ? next : prev;
@@ -424,18 +643,40 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-6 bg-[var(--accent-light)] border border-[var(--purple-border)] rounded-xl flex items-center justify-between no-print"
+            className="mb-8 p-6 bg-[var(--accent-light)] border border-[var(--purple-border)] rounded-xl space-y-4 no-print"
           >
-            <div>
-              <h2 className="text-[15px] font-bold text-[var(--purple-text)] mb-1">Edit Timetable Mode</h2>
-              <p className="text-[12px] text-[var(--purple-strong)] opacity-80">Click on teacher names/subjects to edit, or toggle status pills in the grid for {selectedDay}.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-bold text-[var(--purple-text)] mb-1">Edit Timetable Mode</h2>
+                <p className="text-[12px] text-[var(--purple-strong)] opacity-80">Click on teacher names/subjects to edit, or toggle status pills in the grid for {selectedDay}.</p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    const config = {
+                      teachers: teachers,
+                      timetables: timetables
+                    };
+                    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'school_config.json';
+                    a.click();
+                    alert("Configuration exported! Please copy the contents of the downloaded 'school_config.json' and paste it to the developer chat.");
+                  }}
+                  className="px-4 py-2 bg-white border border-[var(--purple-border)] text-[var(--purple-text)] rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-white shadow-sm active:scale-95 transition-all flex items-center gap-2"
+                >
+                  Export for Developer
+                </button>
+                <button 
+                  onClick={() => setIsEditMode(false)}
+                  className="px-6 py-2 bg-[var(--accent)] text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-[var(--purple-strong)] shadow-sm active:scale-95 transition-all"
+                >
+                  Done Editing
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={() => setIsEditMode(false)}
-              className="px-6 py-2 bg-white border border-[var(--purple-border)] text-[var(--purple-text)] rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-white shadow-sm active:scale-95 transition-all"
-            >
-              Done Editing
-            </button>
           </motion.div>
         )}
 
