@@ -1,0 +1,6 @@
+{
+  "name": "Teacher Substitution Finder",
+  "description": "A streamlined tool for school administrators to find and assign substitute teachers based on live timetable data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --bg: #F7F6F2;
+  --surface: #FFFFFF;
+  --border: #E2E0D8;
+  --border-strong: #C8C5BB;
+  --text: #1A1917;
+  --text-muted: #6B6860;
+  --text-faint: #9C9A93;
+  --green-bg: #EAF3DE;
+  --green-text: #2D5A0E;
+  --green-border: #97C459;
+  --red-bg: #FAECE7;
+  --red-text: #7A2A10;
+  --red-border: #F0997B;
+  --purple-bg: #EEEDFE;
+  --purple-text: #3C3489;
+  --purple-border: #AFA9EC;
+  --purple-strong: #534AB7;
+  --amber-bg: #FAEEDA;
+  --amber-text: #633806;
+  --amber-border: #EF9F27;
+  --accent: #534AB7;
+  --accent-light: #EEEDFE;
+}
+
+body {
+  @apply bg-[var(--bg)] text-[var(--text)] antialiased font-sans;
+}
+
+/* Custom styles for matching the design exactly */
+.status-pill {
+  @apply px-3 py-1 rounded inline-block text-[10px] w-full text-center;
+}
+
+.status-free {
+  @apply bg-[var(--green-bg)] text-[var(--green-text)] border border-[var(--green-border)];
+}
+
+.status-occupied {
+  @apply bg-[var(--red-bg)] text-[var(--red-text)] border border-[var(--red-border)];
+}
+
+.status-break {
+  @apply bg-[var(--amber-bg)] text-[var(--amber-text)] border border-[var(--amber-border)];
+}
+
+.status-assigned {
+  @apply bg-[var(--purple-bg)] text-[var(--purple-text)] border border-[var(--purple-strong)] font-semibold;
+}
+
+.status-highlighted {
+  @apply bg-[var(--purple-bg)] text-[var(--purple-text)] border-2 border-[var(--purple-strong)] font-bold;
+}
+
+.legend-square {
+  @apply w-3 h-3 rounded-[3px] border;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
