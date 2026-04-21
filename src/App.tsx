@@ -319,12 +319,25 @@ const TT13_BASE = Object.fromEntries(TEACHERS.map((t, i) => [t.name, genSchedule
 const TT45_BASE = Object.fromEntries(TEACHERS.map((t, i) => [t.name, genSchedule(i + 100, 6)]));
 
 // Increment this version whenever we hardcode new data to force the browser to update
-const APP_DATA_VERSION = '2026-04-20-hardcoded-v1';
+const APP_DATA_VERSION = '2026-04-21-v3-sections';
 
 export default function App() {
-  const [teachers, setTeachers] = useState<Array<{ id: string; name: string; init: string; subj: string; isHomeBlock: boolean }>>(() => {
+  const [teachers, setTeachers] = useState<Array<{ 
+    id: string; 
+    name: string; 
+    init: string; 
+    subj: string; 
+    isHomeBlock: boolean;
+    teachesMYP13: boolean;
+    teachesMYP45: boolean;
+  }>>(() => {
     const savedVersion = localStorage.getItem('tsf_version');
-    const base = TEACHERS.map((t, i) => ({ ...t, id: `t-${i}` }));
+    const base = TEACHERS.map((t, i) => ({ 
+      ...t, 
+      id: `t-${i}`,
+      teachesMYP13: true, // Default to true, user can toggle
+      teachesMYP45: true  // Default to true, user can toggle
+    }));
 
     // If version mismatch, ignore local storage once and use hardcoded data
     if (savedVersion !== APP_DATA_VERSION) {
@@ -439,7 +452,7 @@ export default function App() {
     const targetRange = parseRange(targetPeriod.time);
     const targetKey = `${selectedDay}_${ttGroup}_${targetPeriod.label}`;
 
-    return teachers.filter(t => {
+    const filtered = teachers.filter(t => {
       // 1. Only Home Block teachers can be substitutes
       if (!t.isHomeBlock) return false;
       
@@ -477,7 +490,52 @@ export default function App() {
 
       return true; // No conflicts, is Home Block staff
     });
-  }, [absentTeacher, ttGroup, periodIdx, assignments, realPeriods, teachers, timetables, selectedDay]);
+
+    // 5. Enrich with free count for the day and Sort (freest first)
+    // The count is calculated based on the 7 lessons of MYP 1-3 or 6 lessons of MYP 4-5
+    // depending on the active search tab.
+    return filtered.map(t => {
+      const dayTT = timetables[t.id]?.[selectedDay];
+      if (!dayTT) return { ...t, freeCount: 0 };
+
+      const otherGroup = ttGroup === 'myp13' ? 'myp45' : 'myp13';
+      const otherPeriods = ttGroup === 'myp13' ? PERIODS_45 : PERIODS_13;
+      
+      let freeCount = 0;
+      let realIdx = 0;
+      for (const p of currentPeriods) {
+        if (p.isBreak) continue;
+        
+        const currentIdx = realIdx++;
+        const isFreeInSelf = dayTT[ttGroup][currentIdx] === 0;
+        
+        if (isFreeInSelf) {
+          // Check if overlapping ANY occupied period in the OTHER group
+          const pRange = parseRange(p.time);
+          let overlapsOtherBusy = false;
+          
+          let otherRealIdx = 0;
+          for (const op of otherPeriods) {
+            if (op.isBreak) continue;
+            const otherIdx = otherRealIdx++;
+            if (dayTT[otherGroup][otherIdx] === 1) {
+              const opRange = parseRange(op.time);
+              if (rangesOverlap(pRange, opRange)) {
+                overlapsOtherBusy = true;
+                break;
+              }
+            }
+          }
+          
+          if (!overlapsOtherBusy) {
+            freeCount++;
+          }
+        }
+      }
+
+      return { ...t, freeCount };
+    }).sort((a, b) => b.freeCount - a.freeCount);
+  }, [absentTeacher, ttGroup, periodIdx, assignments, realPeriods, teachers, timetables, selectedDay, currentPeriods]);
 
   const handleAssign = () => {
     if (!selectedSub || !absentTeacher || periodIdx === '') return;
@@ -522,12 +580,21 @@ export default function App() {
     setAssignments({});
   };
 
-  const handleUpdateTeacher = (id: string, name: string, subj: string, isHomeBlock?: boolean) => {
+  const handleUpdateTeacher = (
+    id: string, 
+    name: string, 
+    subj: string, 
+    isHomeBlock?: boolean, 
+    teachesMYP13?: boolean, 
+    teachesMYP45?: boolean
+  ) => {
     setTeachers(prev => prev.map(t => t.id === id ? { 
       ...t, 
       name, 
       subj, 
-      isHomeBlock: isHomeBlock !== undefined ? isHomeBlock : t.isHomeBlock 
+      isHomeBlock: isHomeBlock !== undefined ? isHomeBlock : t.isHomeBlock,
+      teachesMYP13: teachesMYP13 !== undefined ? teachesMYP13 : t.teachesMYP13,
+      teachesMYP45: teachesMYP45 !== undefined ? teachesMYP45 : t.teachesMYP45
     } : t));
   };
 
@@ -755,7 +822,7 @@ export default function App() {
                         </div>
                         <div>
                           <p className={`text-[13px] font-medium transition-colors ${selectedSub === t.name ? 'text-[var(--purple-text)]' : 'text-[var(--green-text)]'}`}>
-                            {t.name}
+                            {t.name} <span className="opacity-70 text-[11px]">({t.freeCount} free in {ttGroup === 'myp13' ? 'MYP 1–3' : 'MYP 4–5'})</span>
                           </p>
                           <p className={`text-[11px] transition-colors ${selectedSub === t.name ? 'text-[var(--accent)]' : 'text-[#3B6D11]'}`}>
                             {t.subj}
@@ -904,7 +971,14 @@ function LegendItem({ color, borderColor, label, highlighted = false }: { color:
 interface TimetableGridProps {
   activeTab: 'myp13' | 'myp45';
   periods: typeof PERIODS_13;
-  teachers: Array<{ id: string; name: string; subj: string; isHomeBlock: boolean }>;
+  teachers: Array<{ 
+    id: string; 
+    name: string; 
+    subj: string; 
+    isHomeBlock: boolean;
+    teachesMYP13: boolean;
+    teachesMYP45: boolean;
+  }>;
   timetables: Record<string, Record<Day, { myp13: number[], myp45: number[] }>>;
   selectedDay: Day;
   assignments: Record<string, Record<string, boolean>>;
@@ -912,7 +986,14 @@ interface TimetableGridProps {
   highlightPeriodIdx: number;
   highlightGroup: string | null;
   isEditMode: boolean;
-  onUpdateTeacher: (id: string, name: string, subj: string, isHomeBlock?: boolean) => void;
+  onUpdateTeacher: (
+    id: string, 
+    name: string, 
+    subj: string, 
+    isHomeBlock?: boolean, 
+    teachesMYP13?: boolean, 
+    teachesMYP45?: boolean
+  ) => void;
   onToggleSlot: (teacherId: string, group: 'myp13' | 'myp45', idx: number) => void;
 }
 
@@ -930,6 +1011,11 @@ function TimetableGrid({
   onUpdateTeacher,
   onToggleSlot
 }: TimetableGridProps) {
+  // Filter teachers by section membership for the current tab
+  const filteredTeachers = useMemo(() => {
+    return teachers.filter(t => activeTab === 'myp13' ? t.teachesMYP13 : t.teachesMYP45);
+  }, [teachers, activeTab]);
+
   return (
     <table className="w-full border-collapse text-[11px] min-w-[1000px]">
       <thead>
@@ -948,7 +1034,7 @@ function TimetableGrid({
         </tr>
       </thead>
       <tbody>
-        {teachers.map(teacher => {
+        {filteredTeachers.map(teacher => {
           const teacherTT = timetables[teacher.id];
           const dayTT = teacherTT?.[selectedDay];
           const teacherSlots = dayTT ? (activeTab === 'myp13' ? dayTT.myp13 : dayTT.myp45) : [];
@@ -957,21 +1043,41 @@ function TimetableGrid({
             <tr key={teacher.id} className="hover:bg-[#fafaf8]">
               <td className="p-2 border border-[var(--border)] whitespace-nowrap">
                 {isEditMode ? (
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1.5 p-1">
                     <input 
                       value={teacher.name}
                       onChange={(e) => onUpdateTeacher(teacher.id, e.target.value, teacher.subj)}
-                      className="w-full bg-transparent border-none outline-none font-medium text-[var(--text)] p-1 hover:bg-white rounded transition-all focus:bg-white focus:shadow-sm"
+                      className="w-full bg-transparent border-none outline-none font-medium text-[var(--text)] p-0 hover:bg-white rounded transition-all focus:bg-white"
                     />
-                    <label className="flex items-center gap-1.5 px-1 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={teacher.isHomeBlock} 
-                        onChange={(e) => onUpdateTeacher(teacher.id, teacher.name, teacher.subj, e.target.checked)}
-                        className="w-3 h-3 accent-[var(--accent)]"
-                      />
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Home Block Staff</span>
-                    </label>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={teacher.isHomeBlock} 
+                          onChange={(e) => onUpdateTeacher(teacher.id, teacher.name, teacher.subj, e.target.checked)}
+                          className="w-3 h-3 accent-[var(--accent)] scale-90"
+                        />
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-[var(--text-muted)]">HB</span>
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={teacher.teachesMYP13} 
+                          onChange={(e) => onUpdateTeacher(teacher.id, teacher.name, teacher.subj, teacher.isHomeBlock, e.target.checked)}
+                          className="w-3 h-3 accent-[var(--accent)] scale-90"
+                        />
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-[var(--text-muted)]">1–3</span>
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={teacher.teachesMYP45} 
+                          onChange={(e) => onUpdateTeacher(teacher.id, teacher.name, teacher.subj, teacher.isHomeBlock, teacher.teachesMYP13, e.target.checked)}
+                          className="w-3 h-3 accent-[var(--accent)] scale-90"
+                        />
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-[var(--text-muted)]">4–5</span>
+                      </label>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-1 flex items-center gap-2">
