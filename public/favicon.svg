@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="128" fill="#534AB7"/>
+  <rect x="64" y="64" width="384" height="384" rx="32" fill="#ffffff" opacity="0.12"/>
+  <!-- Calendar / Timetable Icon -->
+  <path d="M140 120h232c22 0 40 18 40 40v212c0 22-18 40-40 40H140c-22 0-40-18-40-40V160c0-22 18-40 40-40z" fill="#ffffff" opacity="0.2"/>
+  <path d="M160 100v40M352 100v40" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <path d="M100 200h312" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+  <!-- Checkmark / Substitute indicator -->
+  <circle cx="340" cy="330" r="64" fill="#6EE7B7"/>
+  <path d="M312 330l20 20 40-40" stroke="#065F46" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Users icon silhouette -->
+  <path d="M170 340c0-28 22-50 50-50s50 22 50 50" stroke="#ffffff" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <circle cx="220" cy="240" r="30" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "teachers": {
+      "title": "Teachers",
+      "description": "Staff members in the school timetable system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "init": { "type": "string" },
+        "subj": { "type": "string" },
+        "isHomeBlock": { "type": "boolean" },
+        "teachesMYP13": { "type": "boolean" },
+        "teachesMYP45": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name"]
+    },
+    "timetables": {
+      "title": "Timetables",
+      "description": "Weekly timetable grid per teacher",
+      "type": "object",
+      "properties": {
+        "teacherId": { "type": "string" },
+        "days": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teacherId", "days"]
+    },
+    "substitutions": {
+      "title": "Substitutions",
+      "description": "Daily substitution logs and allocations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "absentTeacher": { "type": "string" },
+        "selectedSub": { "type": "string" },
+        "tab": { "type": "string" },
+        "status": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "absentTeacher"]
+    }
+  }
+}

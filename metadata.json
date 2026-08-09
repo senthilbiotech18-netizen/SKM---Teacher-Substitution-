@@ -1,6 +1,6 @@
 {
-  "name": "Teacher Substitution Finder",
-  "description": "A streamlined tool for school administrators to find and assign substitute teachers based on live timetable data.",
+  "name": "EduTN43 - Teacher Substitution Finder",
+  "description": "EduTN43 streamlined school timetable manager and substitute teacher finder for MYP 1-5.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

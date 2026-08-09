@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Clock, Calendar, Printer, RotateCcw, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Users, Clock, Calendar, Printer, RotateCcw, CheckCircle2, ArrowRight, Plus, Trash2, UserPlus, Download, Laptop, Monitor, X, Info, Cloud, CloudCheck, WifiOff, RefreshCw, Lock, ShieldAlert, Key, AlertTriangle } from 'lucide-react';
+import { db, doc, onSnapshot, setDoc } from './lib/firebase';
 
 // --- Constants & Data ---
 
@@ -282,6 +283,21 @@ const INITIAL_TIMETABLES = {
   }
 };
 
+const createAllFreeTimetables = (teachersList: any[]) => {
+  const freeTT: Record<string, any> = {};
+  teachersList.forEach(t => {
+    const daysObj: Record<string, any> = {};
+    DAYS.forEach(day => {
+      daysObj[day] = {
+        myp13: [0, 0, 0, 0, 0, 0, 0],
+        myp45: [0, 0, 0, 0, 0, 0]
+      };
+    });
+    freeTT[t.id] = daysObj;
+  });
+  return freeTT;
+};
+
 // --- App Component ---
 
 function parseTime(timeStr: string) {
@@ -434,6 +450,228 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'myp13' | 'myp45'>('myp13');
   const [selectedSub, setSelectedSub] = useState('');
 
+  // Firebase Cloud Sync State
+  const [syncStatus, setSyncStatus] = useState<'syncing' | 'synced' | 'saving' | 'error' | 'offline'>('syncing');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const isInitialSnapshotDone = useRef(false);
+
+  // Firestore Real-time Listener across all staff devices
+  useEffect(() => {
+    setSyncStatus('syncing');
+    const schoolDocRef = doc(db, 'app_state', 'school');
+
+    const unsubscribe = onSnapshot(
+      schoolDocRef,
+      async (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data.teachers && Array.isArray(data.teachers) && data.teachers.length > 0) {
+            setTeachers(data.teachers);
+          }
+          if (data.timetables && typeof data.timetables === 'object') {
+            setTimetables(data.timetables);
+          }
+          if (data.assignments && typeof data.assignments === 'object') {
+            setAssignments(data.assignments);
+          }
+          if (data.assignmentLog && Array.isArray(data.assignmentLog)) {
+            setAssignmentLog(data.assignmentLog);
+          }
+          setSyncStatus('synced');
+          setLastSyncTime(new Date());
+          isInitialSnapshotDone.current = true;
+        } else {
+          // Initialize central Firestore database with default teachers and timetables if empty
+          const baseTeachers = TEACHERS.map((t, i) => ({ 
+            ...t, 
+            id: `t-${i}`,
+            teachesMYP13: true,
+            teachesMYP45: true
+          }));
+          const initialData = {
+            teachers: baseTeachers,
+            timetables: INITIAL_TIMETABLES,
+            assignments: {},
+            assignmentLog: [],
+            lastUpdated: new Date().toISOString()
+          };
+          try {
+            await setDoc(schoolDocRef, initialData);
+            setTeachers(baseTeachers);
+            setTimetables(INITIAL_TIMETABLES as any);
+            setSyncStatus('synced');
+            setLastSyncTime(new Date());
+            isInitialSnapshotDone.current = true;
+          } catch (err) {
+            console.error("Failed to seed initial Firestore data:", err);
+            setSyncStatus('error');
+          }
+        }
+      },
+      (error) => {
+        console.error("Firestore real-time sync error:", error);
+        setSyncStatus('offline');
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Central Helper to Save Changes to Firebase Cloud
+  const saveToCloud = async (
+    updatedTeachers?: any, 
+    updatedTimetables?: any, 
+    updatedAssignments?: any, 
+    updatedAssignmentLog?: any
+  ) => {
+    setSyncStatus('saving');
+    try {
+      const schoolDocRef = doc(db, 'app_state', 'school');
+      const payload: any = {
+        teachers: updatedTeachers !== undefined ? updatedTeachers : teachers,
+        timetables: updatedTimetables !== undefined ? updatedTimetables : timetables,
+        assignments: updatedAssignments !== undefined ? updatedAssignments : assignments,
+        assignmentLog: updatedAssignmentLog !== undefined ? updatedAssignmentLog : assignmentLog,
+        lastUpdated: new Date().toISOString()
+      };
+      await setDoc(schoolDocRef, payload, { merge: true });
+      setSyncStatus('synced');
+      setLastSyncTime(new Date());
+    } catch (err) {
+      console.error("Error saving to Firebase cloud:", err);
+      setSyncStatus('error');
+    }
+  };
+
+  // Add teacher form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTeacherName, setNewTeacherName] = useState('');
+  const [newTeacherInit, setNewTeacherInit] = useState('');
+  const [newTeacherSubj, setNewTeacherSubj] = useState('');
+  const [newTeacherIsHomeBlock, setNewTeacherIsHomeBlock] = useState(true);
+  const [newTeacherTeachesMYP13, setNewTeacherTeachesMYP13] = useState(true);
+  const [newTeacherTeachesMYP45, setNewTeacherTeachesMYP45] = useState(true);
+
+  // Admin Reset & Password Modal State
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetPasswordInput, setResetPasswordInput] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
+  const [resetSuccessNotice, setResetSuccessNotice] = useState('');
+  const [resetMode, setResetMode] = useState<'all_free' | 'demo'>('all_free');
+
+  const handleOpenResetModal = () => {
+    setResetPasswordInput('');
+    setResetPasswordError('');
+    setResetMode('all_free');
+    setShowResetModal(true);
+  };
+
+  const executeServerReset = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    const inputTrimmed = resetPasswordInput.trim();
+    if (inputTrimmed !== 'admin@gsis') {
+      setResetPasswordError('Incorrect admin password. Access denied.');
+      return;
+    }
+
+    setResetPasswordError('');
+    setSyncStatus('saving');
+
+    const baseTeachers = TEACHERS.map((t, i) => ({ 
+      ...t, 
+      id: `t-${i}`,
+      teachesMYP13: true,
+      teachesMYP45: true
+    }));
+
+    const targetTimetables = resetMode === 'all_free'
+      ? createAllFreeTimetables(baseTeachers)
+      : INITIAL_TIMETABLES;
+
+    const initialData = {
+      teachers: baseTeachers,
+      timetables: targetTimetables,
+      assignments: {},
+      assignmentLog: [],
+      lastUpdated: new Date().toISOString()
+    };
+
+    try {
+      const schoolDocRef = doc(db, 'app_state', 'school');
+      // Overwrite central Firebase Firestore document directly without merge to wipe old custom data
+      await setDoc(schoolDocRef, initialData);
+
+      setTeachers(baseTeachers);
+      setTimetables(targetTimetables as any);
+      setAssignments({});
+      setAssignmentLog([]);
+
+      localStorage.removeItem('tsf_teachers');
+      localStorage.removeItem('tsf_timetables');
+      localStorage.removeItem('tsf_assignments');
+      localStorage.removeItem('tsf_log');
+
+      setSyncStatus('synced');
+      setLastSyncTime(new Date());
+      setShowResetModal(false);
+      setResetPasswordInput('');
+      setResetSuccessNotice(
+        resetMode === 'all_free'
+          ? 'Central Firebase server database reset: ALL class slots set to FREE across all staff members!'
+          : 'Central Firebase server database reset to default demo timetable schedule!'
+      );
+      setTimeout(() => setResetSuccessNotice(''), 8000);
+    } catch (err) {
+      console.error("Failed to reset Firestore database:", err);
+      setResetPasswordError('Firebase error resetting server database. Please check your network connection.');
+      setSyncStatus('error');
+    }
+  };
+
+  // PWA Installation State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    // Check if running in standalone mode (already installed)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsAppInstalled(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const triggerInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsAppInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
+
   // Persistence
   useEffect(() => {
     localStorage.setItem('tsf_teachers', JSON.stringify(teachers));
@@ -544,16 +782,16 @@ export default function App() {
     const subTeacher = teachers.find(t => t.name === selectedSub);
     if (!subTeacher) return;
 
-    setAssignments(prev => ({
-      ...prev,
+    const nextAssignments = {
+      ...assignments,
       [subTeacher.id]: {
-        ...(prev[subTeacher.id] || {}),
+        ...(assignments[subTeacher.id] || {}),
         [key]: true,
       }
-    }));
+    };
 
-    setAssignmentLog(prev => [
-      ...prev,
+    const nextLog = [
+      ...assignmentLog,
       {
         absent: absentTeacher,
         sub: selectedSub,
@@ -562,7 +800,11 @@ export default function App() {
         periodTime: periodInfo.time,
         day: selectedDay,
       }
-    ]);
+    ];
+
+    setAssignments(nextAssignments);
+    setAssignmentLog(nextLog);
+    saveToCloud(teachers, timetables, nextAssignments, nextLog);
 
     setAbsentTeacher('');
     setPeriodIdx('');
@@ -578,6 +820,7 @@ export default function App() {
   const clearLog = () => {
     setAssignmentLog([]);
     setAssignments({});
+    saveToCloud(teachers, timetables, {}, []);
   };
 
   const handleUpdateTeacher = (
@@ -588,37 +831,98 @@ export default function App() {
     teachesMYP13?: boolean, 
     teachesMYP45?: boolean
   ) => {
-    setTeachers(prev => prev.map(t => t.id === id ? { 
+    const nextTeachers = teachers.map(t => t.id === id ? { 
       ...t, 
       name, 
       subj, 
       isHomeBlock: isHomeBlock !== undefined ? isHomeBlock : t.isHomeBlock,
       teachesMYP13: teachesMYP13 !== undefined ? teachesMYP13 : t.teachesMYP13,
       teachesMYP45: teachesMYP45 !== undefined ? teachesMYP45 : t.teachesMYP45
-    } : t));
+    } : t);
+    setTeachers(nextTeachers);
+    saveToCloud(nextTeachers, timetables, assignments, assignmentLog);
+  };
+
+  const handleAddTeacher = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newTeacherName.trim()) return;
+    const init = newTeacherInit.trim() || newTeacherName.trim().slice(0, 2).toUpperCase();
+    const newId = `t-${Date.now()}`;
+    const newT = {
+      id: newId,
+      name: newTeacherName.trim(),
+      init,
+      subj: newTeacherSubj.trim() || 'General',
+      isHomeBlock: newTeacherIsHomeBlock,
+      teachesMYP13: newTeacherTeachesMYP13,
+      teachesMYP45: newTeacherTeachesMYP45
+    };
+
+    const nextTeachers = [...teachers, newT];
+    const newTTForTeacher: any = {};
+    DAYS.forEach(day => {
+      newTTForTeacher[day] = {
+        myp13: [0, 0, 0, 0, 0, 0, 0],
+        myp45: [0, 0, 0, 0, 0, 0]
+      };
+    });
+    const nextTimetables = { ...timetables, [newId]: newTTForTeacher };
+
+    setTeachers(nextTeachers);
+    setTimetables(nextTimetables);
+    saveToCloud(nextTeachers, nextTimetables, assignments, assignmentLog);
+
+    setNewTeacherName('');
+    setNewTeacherInit('');
+    setNewTeacherSubj('');
+    setNewTeacherIsHomeBlock(true);
+    setNewTeacherTeachesMYP13(true);
+    setNewTeacherTeachesMYP45(true);
+    setShowAddForm(false);
+  };
+
+  const handleDeleteTeacher = (id: string) => {
+    const t = teachers.find(teacher => teacher.id === id);
+    const name = t ? t.name : 'this teacher';
+    if (window.confirm(`Are you sure you want to delete "${name}" from the teacher list?`)) {
+      const nextTeachers = teachers.filter(teacher => teacher.id !== id);
+      const nextTimetables = { ...timetables };
+      delete nextTimetables[id];
+
+      setTeachers(nextTeachers);
+      setTimetables(nextTimetables);
+      saveToCloud(nextTeachers, nextTimetables, assignments, assignmentLog);
+
+      if (absentTeacher === name) setAbsentTeacher('');
+      if (selectedSub === name) setSelectedSub('');
+    }
   };
 
   const handleToggleSlot = (teacherId: string, group: 'myp13' | 'myp45', idx: number) => {
-    setTimetables(prev => {
-      const newTT = { ...prev };
-      const teacherTT = { ...newTT[teacherId] };
-      const dayTT = { ...teacherTT[selectedDay] };
-      const slots = [...dayTT[group]];
-      slots[idx] = slots[idx] === 0 ? 1 : 0;
-      dayTT[group] = slots;
-      teacherTT[selectedDay] = dayTT;
-      newTT[teacherId] = teacherTT;
-      return newTT;
-    });
+    const newTT = { ...timetables };
+    const teacherTT = { ...newTT[teacherId] };
+    const dayTT = { ...teacherTT[selectedDay] };
+    const slots = [...dayTT[group]];
+    slots[idx] = slots[idx] === 0 ? 1 : 0;
+    dayTT[group] = slots;
+    teacherTT[selectedDay] = dayTT;
+    newTT[teacherId] = teacherTT;
+
+    setTimetables(newTT);
+    saveToCloud(teachers, newTT, assignments, assignmentLog);
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg)] font-sans text-[var(--text)] pb-20">
       {/* Header */}
-      <header className="bg-white border-b border-[var(--border)] px-8 py-5 flex items-center justify-between sticky top-0 z-20 print:relative">
-        <div className="flex items-center gap-4">
-          <h1 className="text-[20px] font-semibold tracking-tight">Teacher Substitution Finder</h1>
-          <div className="flex no-print bg-[var(--bg)] p-1 rounded-lg border border-[var(--border)] gap-1">
+      <header className="bg-white border-b border-[var(--border)] px-8 py-4 flex items-center justify-between sticky top-0 z-20 print:relative">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-[#534AB7] text-white px-3 py-1 rounded-xl font-black text-sm tracking-wider shadow-xs">
+            <span className="text-amber-300 font-extrabold text-xs uppercase">Edu</span>
+            <span className="text-white font-extrabold text-sm">TN43</span>
+          </div>
+          <h1 className="text-[19px] font-bold tracking-tight text-[var(--text)]">Teacher Substitution Finder</h1>
+          <div className="flex no-print bg-[var(--bg)] p-1 rounded-lg border border-[var(--border)] gap-1 ml-2">
             <button 
               onClick={() => setIsEditMode(false)}
               className={`px-4 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${!isEditMode ? 'bg-white shadow-sm text-[var(--accent)] border border-[var(--border)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
@@ -634,6 +938,71 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-4 no-print">
+          {/* Firebase Central Server Sync Status */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-[var(--bg)] border border-[var(--border)] shadow-xs">
+            {syncStatus === 'synced' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                  <CloudCheck size={14} /> Firebase Central Server Active
+                </span>
+              </>
+            )}
+            {syncStatus === 'saving' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span className="text-amber-700 font-bold flex items-center gap-1.5">
+                  <RefreshCw size={13} className="animate-spin" /> Syncing to Cloud...
+                </span>
+              </>
+            )}
+            {syncStatus === 'syncing' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-blue-700 font-bold flex items-center gap-1.5">
+                  <Cloud size={14} className="animate-bounce" /> Connecting...
+                </span>
+              </>
+            )}
+            {syncStatus === 'offline' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-gray-400" />
+                <span className="text-gray-600 font-bold flex items-center gap-1.5">
+                  <WifiOff size={14} /> Local Offline Mode
+                </span>
+              </>
+            )}
+            {syncStatus === 'error' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span className="text-rose-700 font-bold flex items-center gap-1.5">
+                  Sync Error
+                </span>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={triggerInstallApp}
+            className={`px-3.5 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5 ${
+              isAppInstalled 
+                ? 'bg-[var(--purple-bg)] text-[var(--purple-text)] border border-[var(--purple-border)] hover:bg-[var(--accent-light)]' 
+                : 'bg-[#534AB7] text-white hover:bg-[#3C3489]'
+            }`}
+            title="Install App on Windows, Chromebook, or Mac Desktop"
+          >
+            <Download size={14} />
+            {isAppInstalled ? 'App Installed' : 'Install Desktop App'}
+          </button>
+
+          <button
+            onClick={handleOpenResetModal}
+            className="px-3.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-lg text-[11px] font-bold uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+            title="Admin Password Protected Reset Server Database"
+          >
+            <ShieldAlert size={14} />
+            Reset Server
+          </button>
           <div className="flex items-center h-9 px-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg">
             {DAYS.map(day => (
               <button
@@ -654,6 +1023,27 @@ export default function App() {
       </header>
 
       <main className="max-w-[1240px] mx-auto px-8 py-7">
+        <AnimatePresence>
+          {resetSuccessNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3.5 rounded-xl mb-6 text-xs font-semibold flex items-center justify-between no-print shadow-sm"
+            >
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+                <span>{resetSuccessNotice}</span>
+              </div>
+              <button 
+                onClick={() => setResetSuccessNotice('')} 
+                className="p-1 text-emerald-600 hover:text-emerald-900 rounded-lg hover:bg-emerald-100 transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {!isEditMode && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             {/* Control Panel */}
@@ -732,12 +1122,43 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 p-6 bg-[var(--accent-light)] border border-[var(--purple-border)] rounded-xl space-y-4 no-print"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-[15px] font-bold text-[var(--purple-text)] mb-1">Edit Timetable Mode</h2>
-                <p className="text-[12px] text-[var(--purple-strong)] opacity-80">Click on teacher names/subjects to edit, or toggle status pills in the grid for {selectedDay}.</p>
+                <p className="text-[12px] text-[var(--purple-strong)] opacity-80">
+                  Click on teacher names/subjects to edit, toggle status pills in the grid for {selectedDay}, or add/delete teachers.
+                </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setShowAddForm(prev => !prev)}
+                  className="px-4 py-2 bg-[#534AB7] text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-[#3C3489] shadow-sm active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <UserPlus size={15} />
+                  {showAddForm ? 'Cancel Add' : 'Add New Teacher'}
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (window.confirm("Set all slots for all teachers to FREE across all 5 days on the central server?")) {
+                      const freeTT = createAllFreeTimetables(teachers);
+                      setTimetables(freeTT);
+                      await saveToCloud(teachers, freeTT, assignments, assignmentLog);
+                      setResetSuccessNotice('All class slots set to FREE across all staff members!');
+                      setTimeout(() => setResetSuccessNotice(''), 6000);
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 rounded-lg text-xs font-bold uppercase tracking-widest shadow-sm active:scale-95 transition-all flex items-center gap-2"
+                  title="Clear all period slots in the timetable to Free (0)"
+                >
+                  <RotateCcw size={14} /> Clear All to Free
+                </button>
+                <button 
+                  onClick={handleOpenResetModal}
+                  className="px-4 py-2 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-bold uppercase tracking-widest shadow-sm active:scale-95 transition-all flex items-center gap-2"
+                  title="Password-protected reset central server database"
+                >
+                  <ShieldAlert size={14} /> Reset Server Data
+                </button>
                 <button 
                   onClick={() => {
                     const config = {
@@ -754,7 +1175,7 @@ export default function App() {
                   }}
                   className="px-4 py-2 bg-white border border-[var(--purple-border)] text-[var(--purple-text)] rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-white shadow-sm active:scale-95 transition-all flex items-center gap-2"
                 >
-                  Export for Developer
+                  Export Data
                 </button>
                 <button 
                   onClick={() => setIsEditMode(false)}
@@ -764,6 +1185,105 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            {/* Add Teacher Inline Form */}
+            <AnimatePresence>
+              {showAddForm && (
+                <motion.form 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  onSubmit={handleAddTeacher}
+                  className="mt-4 pt-4 border-t border-[var(--purple-border)] bg-white p-5 rounded-lg border border-[var(--border)] shadow-sm space-y-4 overflow-hidden"
+                >
+                  <div className="text-[12px] font-bold uppercase tracking-wider text-[var(--accent)] flex items-center gap-2">
+                    <UserPlus size={14} /> Add New Teacher to Staff List
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Teacher Name *</label>
+                      <input 
+                        type="text"
+                        required
+                        value={newTeacherName}
+                        onChange={e => setNewTeacherName(e.target.value)}
+                        placeholder="e.g. John Smith"
+                        className="w-full bg-[var(--bg)] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Initials (Optional)</label>
+                      <input 
+                        type="text"
+                        value={newTeacherInit}
+                        onChange={e => setNewTeacherInit(e.target.value)}
+                        placeholder="e.g. JS (Auto if blank)"
+                        className="w-full bg-[var(--bg)] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Subject</label>
+                      <input 
+                        type="text"
+                        value={newTeacherSubj}
+                        onChange={e => setNewTeacherSubj(e.target.value)}
+                        placeholder="e.g. Physics / Mathematics"
+                        className="w-full bg-[var(--bg)] border border-[var(--border-strong)] rounded-lg px-3 py-2 text-xs outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--border)]">
+                    <div className="flex items-center gap-4">
+                      <span className="text-[11px] font-bold uppercase text-[var(--text-muted)]">Options:</span>
+                      <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={newTeacherIsHomeBlock} 
+                          onChange={e => setNewTeacherIsHomeBlock(e.target.checked)} 
+                          className="accent-[var(--accent)]"
+                        />
+                        <span>Home Block Staff</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={newTeacherTeachesMYP13} 
+                          onChange={e => setNewTeacherTeachesMYP13(e.target.checked)} 
+                          className="accent-[var(--accent)]"
+                        />
+                        <span>Teaches MYP 1–3</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={newTeacherTeachesMYP45} 
+                          onChange={e => setNewTeacherTeachesMYP45(e.target.checked)} 
+                          className="accent-[var(--accent)]"
+                        />
+                        <span>Teaches MYP 4–5</span>
+                      </label>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowAddForm(false)}
+                        className="px-4 py-1.5 border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 active:scale-95 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="px-5 py-1.5 bg-[#534AB7] text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#3C3489] active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <Plus size={14} /> Add Teacher
+                      </button>
+                    </div>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
@@ -950,12 +1470,241 @@ export default function App() {
               highlightGroup={isEditMode ? null : ttGroup}
               isEditMode={isEditMode}
               onUpdateTeacher={handleUpdateTeacher}
+              onDeleteTeacher={handleDeleteTeacher}
               onToggleSlot={handleToggleSlot}
             />
           </div>
         </div>
       </main>
+
+      {/* Install App Guide Modal */}
+      <AnimatePresence>
+        {showInstallGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+            onClick={() => setShowInstallGuide(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[var(--border)] space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--purple-bg)] border border-[var(--purple-border)] flex items-center justify-center text-[var(--accent)] font-bold">
+                    <Laptop size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text)]">Install Desktop App</h3>
+                    <p className="text-xs text-[var(--text-muted)]">Works on Windows, Chromebooks, macOS & Mobile</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowInstallGuide(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs leading-relaxed text-[var(--text-muted)]">
+                <p className="font-medium text-[var(--text)] text-sm">
+                  Install this app directly to your desktop or launcher for instant access and offline use:
+                </p>
+
+                <div className="bg-[var(--bg)] p-3.5 rounded-xl border border-[var(--border)] space-y-1.5">
+                  <div className="font-bold text-[var(--accent)] flex items-center gap-2 text-[12px]">
+                    <Monitor size={15} /> Windows & Chromebooks (Chrome / Edge)
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 pl-1 text-[11px]">
+                    <li>Look at your browser address bar (URL bar) at the top right.</li>
+                    <li>Click the <strong>Install icon (⊕ or 💻)</strong> next to the bookmark star.</li>
+                    <li>Or click menu <strong>(⋮) → Save and Share → Install page as app</strong>.</li>
+                  </ol>
+                </div>
+
+                <div className="bg-[var(--bg)] p-3.5 rounded-xl border border-[var(--border)] space-y-1.5">
+                  <div className="font-bold text-[var(--accent)] flex items-center gap-2 text-[12px]">
+                    <Laptop size={15} /> Mac Desktop (macOS Safari or Chrome)
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 pl-1 text-[11px]">
+                    <li><strong>Safari:</strong> Click <strong>File</strong> in Mac menu bar → <strong>Add to Dock</strong>.</li>
+                    <li><strong>Chrome:</strong> Click menu <strong>(⋮) → Save and Share → Install page as app</strong>.</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setShowInstallGuide(false)}
+                  className="px-6 py-2 bg-[#534AB7] text-white rounded-lg text-xs font-semibold hover:bg-[#3C3489] transition-all shadow-sm"
+                >
+                  Got It
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset Server Database Modal */}
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+            onClick={() => setShowResetModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[var(--border)] space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 font-bold">
+                    <ShieldAlert size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text)]">Reset Central Server Data</h3>
+                    <p className="text-xs text-[var(--text-muted)]">Admin Password Required</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={executeServerReset} className="space-y-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-800 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5 text-amber-900">
+                    <AlertTriangle size={15} /> Danger Zone
+                  </p>
+                  <p>
+                    This action will reset the central Firebase server database and clear all substitution records across all staff devices.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-[var(--text)] uppercase tracking-wider">
+                    Reset Mode Selection
+                  </label>
+                  <div className="space-y-2 text-xs">
+                    <div 
+                      onClick={() => setResetMode('all_free')}
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                        resetMode === 'all_free' 
+                          ? 'border-[#534AB7] bg-indigo-50/70 text-indigo-950 font-medium shadow-xs' 
+                          : 'border-[var(--border)] hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="resetMode"
+                        value="all_free"
+                        checked={resetMode === 'all_free'}
+                        onChange={() => setResetMode('all_free')}
+                        className="mt-0.5 accent-[#534AB7]"
+                      />
+                      <div>
+                        <div className="font-bold text-sm text-[var(--text)] flex items-center gap-1.5">
+                          <CheckCircle2 size={15} className="text-emerald-600" />
+                          Set ALL Timetable Slots to FREE (0)
+                        </div>
+                        <p className="text-[11px] text-[var(--text-muted)] font-normal mt-0.5">
+                          Clears every period across all 5 days for every teacher to FREE (0). Everything on the timetable will show FREE.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div 
+                      onClick={() => setResetMode('demo')}
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                        resetMode === 'demo' 
+                          ? 'border-[#534AB7] bg-indigo-50/70 text-indigo-950 font-medium shadow-xs' 
+                          : 'border-[var(--border)] hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="resetMode"
+                        value="demo"
+                        checked={resetMode === 'demo'}
+                        onChange={() => setResetMode('demo')}
+                        className="mt-0.5 accent-[#534AB7]"
+                      />
+                      <div>
+                        <div className="font-bold text-sm text-[var(--text)]">
+                          Restore Preloaded Demo Schedule
+                        </div>
+                        <p className="text-[11px] text-[var(--text-muted)] font-normal mt-0.5">
+                          Restores sample timetable schedule with pre-filled occupied/free classes.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[var(--text)] uppercase tracking-wider">
+                    Enter Admin Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={resetPasswordInput}
+                      onChange={(e) => {
+                        setResetPasswordInput(e.target.value);
+                        setResetPasswordError('');
+                      }}
+                      placeholder="Enter admin password"
+                      className="w-full bg-[var(--bg)] border border-[var(--border-strong)] rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] transition-all pr-10"
+                      autoFocus
+                    />
+                    <Lock size={16} className="absolute right-3 top-3 text-gray-400" />
+                  </div>
+                  {resetPasswordError && (
+                    <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-lg flex items-center gap-2">
+                      <X size={14} /> {resetPasswordError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetModal(false)}
+                    className="px-4 py-2 border border-[var(--border)] rounded-lg text-xs font-semibold hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
+                  >
+                    <RotateCcw size={14} />
+                    Confirm Reset
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+
   );
 }
 
@@ -994,6 +1743,7 @@ interface TimetableGridProps {
     teachesMYP13?: boolean, 
     teachesMYP45?: boolean
   ) => void;
+  onDeleteTeacher: (id: string) => void;
   onToggleSlot: (teacherId: string, group: 'myp13' | 'myp45', idx: number) => void;
 }
 
@@ -1009,6 +1759,7 @@ function TimetableGrid({
   highlightGroup,
   isEditMode,
   onUpdateTeacher,
+  onDeleteTeacher,
   onToggleSlot
 }: TimetableGridProps) {
   // Filter teachers by section membership for the current tab
@@ -1044,11 +1795,21 @@ function TimetableGrid({
               <td className="p-2 border border-[var(--border)] whitespace-nowrap">
                 {isEditMode ? (
                   <div className="flex flex-col gap-1.5 p-1">
-                    <input 
-                      value={teacher.name}
-                      onChange={(e) => onUpdateTeacher(teacher.id, e.target.value, teacher.subj)}
-                      className="w-full bg-transparent border-none outline-none font-medium text-[var(--text)] p-0 hover:bg-white rounded transition-all focus:bg-white"
-                    />
+                    <div className="flex items-center justify-between gap-1">
+                      <input 
+                        value={teacher.name}
+                        onChange={(e) => onUpdateTeacher(teacher.id, e.target.value, teacher.subj)}
+                        className="w-full bg-transparent border-none outline-none font-medium text-[var(--text)] p-0 hover:bg-white rounded transition-all focus:bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onDeleteTeacher(teacher.id)}
+                        title={`Delete ${teacher.name}`}
+                        className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-1">
                       <label className="flex items-center gap-1 cursor-pointer">
                         <input 

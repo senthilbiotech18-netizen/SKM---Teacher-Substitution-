@@ -8,3 +8,17 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// Register Service Worker for PWA (Windows, Chromebook, macOS, Mobile installation & offline capability)
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (registration) => {
+        console.log('SW registered successfully:', registration.scope);
+      },
+      (err) => {
+        console.log('SW registration failed:', err);
+      }
+    );
+  });
+}
